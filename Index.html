@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gabba Caption | AI Magic</title>
+    <style>
+        :root { --primary: #00f2fe; --accent: #4facfe; --bg: #0b0b14; }
+        body { 
+            font-family: 'Inter', sans-serif; background: var(--bg); color: white;
+            display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px;
+        }
+        .container { 
+            background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(15px);
+            padding: 25px; border-radius: 28px; width: 100%; max-width: 500px;
+            border: 1px solid rgba(255, 255, 255, 0.1); box-shadow: 0 20px 50px rgba(0,0,0,0.8);
+        }
+        .brand-name { text-align: center; margin-bottom: 25px; }
+        .brand-name h1 { 
+            margin: 0; font-size: 38px; background: linear-gradient(90deg, #4facfe, #00f2fe); 
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-weight: 900;
+        }
+        .brand-name p { color: #a0a0a0; font-size: 12px; text-transform: uppercase; letter-spacing: 2px; margin-top: 5px;}
+        .upload-section {
+            border: 2px dashed rgba(79, 172, 254, 0.4); border-radius: 15px; padding: 20px;
+            text-align: center; cursor: pointer; margin-bottom: 20px; background: rgba(79, 172, 254, 0.05);
+        }
+        #imagePreview { max-width: 100%; max-height: 150px; border-radius: 10px; display: none; margin-top: 10px; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
+        textarea, select { 
+            width: 100%; background: #161625; color: white; border: 1px solid #333;
+            padding: 12px; border-radius: 10px; outline: none; box-sizing: border-box; font-size: 14px;
+        }
+        textarea { height: 80px; grid-column: span 2; resize: none; }
+        .checkbox-group { display: flex; justify-content: space-around; margin: 10px 0 20px 0; font-size: 13px; color: #ccc; }
+        .main-btn { 
+            background: linear-gradient(90deg, var(--accent), var(--primary));
+            color: #000; border: none; padding: 16px; border-radius: 12px;
+            width: 100%; font-weight: bold; cursor: pointer; transition: 0.3s; font-size: 16px; text-transform: uppercase;
+        }
+        .output-box { 
+            background: rgba(255,255,255,0.05); padding: 15px; border-radius: 16px; 
+            margin-top: 25px; display: none; border: 1px solid rgba(0, 242, 254, 0.2);
+        }
+        .caption-item { margin-bottom: 15px; padding: 12px; background: rgba(0,0,0,0.3); border-radius: 10px; }
+        .copy-btn { background: #27ae60; border: none; color: white; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; margin-top: 8px; }
+        .loader { display: none; margin: 15px auto; border: 4px solid #1a1a2e; border-top: 4px solid var(--primary); border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="brand-name">
+        <h1>Gabba Caption</h1>
+        <p>AI Social Media Assistant</p>
+    </div>
+    
+    <div class="upload-section" onclick="document.getElementById('imageInput').click()">
+        <p id="uploadText" style="margin:0;">📸 ෆොටෝ එකක් දාන්න (Optional)</p>
+        <input type="file" id="imageInput" accept="image/*" style="display: none;" onchange="processImage(this)">
+        <center><img id="imagePreview"></center>
+    </div>
+
+    <div class="grid">
+        <textarea id="userInput" placeholder="මොකක් ගැනද ලියන්න ඕනෙ? (Beach, Party, Sad vibe...)"></textarea>
+        <select id="platform">
+            <option value="Instagram">Instagram</option>
+            <option value="Facebook">Facebook</option>
+            <option value="TikTok">TikTok</option>
+        </select>
+        <select id="language">
+            <option value="Singlish">Singlish (Mix)</option>
+            <option value="Pure Sinhala">සිංහල විතරක්</option>
+            <option value="English">English Only</option>
+        </select>
+        <select id="tone" style="grid-column: span 2;">
+            <option value="Funny and Witty">Funny / ආතල් එකට</option>
+            <option value="Deep and Aesthetic">Deep / Aesthetic</option>
+            <option value="Professional">Professional</option>
+            <option value="Romantic">Romantic / ලව් එකට</option>
+        </select>
+    </div>
+
+    <div class="checkbox-group">
+        <label><input type="checkbox" id="addEmoji" checked> Emojis</label>
+        <label><input type="checkbox" id="addHashtags" checked> Hashtags</label>
+    </div>
+
+    <button class="main-btn" id="genBtn" onclick="generateCaption()">Get Captions</button>
+    <div class="loader" id="loader"></div>
+
+    <div id="output" class="output-box">
+        <p style="color: var(--primary); font-size: 13px; font-weight: bold; margin-bottom: 10px;">Gabba's Results:</p>
+        <div id="captionContainer"></div>
+    </div>
+</div>
+
+<script>
+    let base64Image = "";
+
+    function processImage(input) {
+        const file = input.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    const scale = 800 / img.width;
+                    canvas.width = 800; canvas.height = img.height * scale;
+                    canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+                    base64Image = canvas.toDataURL('image/jpeg', 0.7).split(',')[1];
+                    document.getElementById('imagePreview').src = canvas.toDataURL();
+                    document.getElementById('imagePreview').style.display = "block";
+                    document.getElementById('uploadText').innerText = "✅ Photo Added!";
+                };
+                img.src = e.target.result;
+            }
+            reader.readAsDataURL(file);
+        }
+    }
+
+    async function generateCaption() {
+        const ctx = document.getElementById('userInput').value;
+        const platform = document.getElementById('platform').value;
+        const lang = document.getElementById('language').value;
+        const tone = document.getElementById('tone').value;
+        const emoji = document.getElementById('addEmoji').checked ? "with emojis" : "no emojis";
+        const hash = document.getElementById('addHashtags').checked ? "with hashtags" : "no hashtags";
+        
+        if(!base64Image && !ctx.trim()) return alert("ෆොටෝ එකක් හෝ විස්තරයක් දෙන්න!");
+
+        const btn = document.getElementById('genBtn');
+        btn.disabled = true;
+        btn.innerText = "Gabba is thinking...";
+        document.getElementById('loader').style.display = "block";
+        document.getElementById('output').style.display = "none";
+
+        const prompt = `Act as a Sri Lankan social media expert. Create 2 distinct ${platform} captions. Context: ${ctx}. Language: ${lang}. Tone: ${tone}. ${emoji}. ${hash}. Format as: 1. [caption] 2. [caption]`;
+        
+        const payload = { contents: [{ parts: [{ text: base64Image ? "Look at this image and " + prompt : prompt }] }] };
+        if(base64Image) payload.contents[0].parts.push({ inline_data: { mime_type: "image/jpeg", data: base64Image } });
+
+        try {
+            // මෙතන තමයි වැදගත්ම දේ - අපි කතා කරන්නේ අපේම API එකට
+            const res = await fetch('/api/generate', {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+            const responseText = data.candidates[0].content.parts[0].text;
+            const captions = responseText.split(/\d\./).filter(c => c.trim().length > 5);
+            
+            let html = "";
+            captions.forEach(cap => {
+                html += `<div class="caption-item"><p>${cap.trim()}</p><button class="copy-btn" onclick="copyThis(this)">📋 Copy</button></div>`;
+            });
+            document.getElementById('captionContainer').innerHTML = html;
+            document.getElementById('output').style.display = "block";
+        } catch (e) { alert("Error! ආයෙත් උත්සාහ කරන්න."); }
+        finally {
+            btn.disabled = false;
+            btn.innerText = "Get Captions";
+            document.getElementById('loader').style.display = "none";
+        }
+    }
+
+    function copyThis(btn) {
+        navigator.clipboard.writeText(btn.previousElementSibling.innerText);
+        btn.innerText = "✅ Copied!";
+        setTimeout(() => btn.innerText = "📋 Copy", 2000);
+    }
+</script>
+</body>
+</html>
